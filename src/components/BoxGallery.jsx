@@ -1,21 +1,13 @@
-import React from 'react';
-import { Html, Reflector } from '@react-three/drei';
-import { useLoader } from '@react-three/fiber';
-import { TextureLoader } from 'three';
+// src/components/BoxGallery.jsx
+import React, { useEffect } from 'react';
+import { Reflector } from '@react-three/drei';
 import * as THREE from 'three';
+import { AssetManager } from './utils/AssetManager';
 
 function BoxGallery() {
-  const sampleImages = [
-    '/assets/imgs/wall.jpg',
-    '/assets/imgs/wos.jpg',
-    '/assets/imgs/tunnelcanals.jpg',
-    '/assets/imgs/tryangles.jpg',
-    '/assets/imgs/painters.jpg',
-    '/assets/imgs/lido.jpg',
-    '/assets/imgs/konica.jpg',
-    '/assets/imgs/flower.jpg'
-  ];
-
+  // Use preloaded textures from AssetManager
+  const textures = AssetManager.getSampleTexturesForGallery(8);
+  
   const reflectionProps = {
     resolution: 512,
     mirror: 1,
@@ -26,13 +18,12 @@ function BoxGallery() {
     roughness: 0.1
   };
 
-  // Load all textures at once using useLoader
-  const textures = useLoader(TextureLoader, sampleImages);
-
-  // Add loading state check
-  if (!textures || textures.some(texture => !texture)) {
-    return <Html center><div style={{ color: 'white' }}>Loading textures...</div></Html>;
-  }
+  // Cleanup textures on unmount
+  useEffect(() => {
+    return () => {
+      // No need to dispose here, AssetManager handles this
+    };
+  }, []);
 
   return (
     <>
@@ -65,19 +56,28 @@ function BoxGallery() {
 
         {/* Paintings */}
         {textures.map((texture, index) => {
-          const aspectRatio = texture.image.width / texture.image.height;
+          // Calculate aspect ratio for the texture
+          const aspectRatio = 
+            texture.image instanceof HTMLCanvasElement ? 1 :
+            texture.image ? texture.image.width / texture.image.height : 1;
+          
           const height = 4;
           const width = height * aspectRatio;
 
           return (
-            <mesh
-              key={`painting-${index}`}
-              position={[0, 4, -index * 5]}
-              rotation={[0, 0, 0]}
-            >
-              <planeGeometry args={[width, height]} />
-              <meshStandardMaterial map={texture} />
-            </mesh>
+            <group key={`painting-${index}`} position={[0, 4, -index * 5]}>
+              {/* Frame */}
+              <mesh position={[0, 0, -0.05]}>
+                <planeGeometry args={[width + 0.2, height + 0.2]} />
+                <meshStandardMaterial color="black" />
+              </mesh>
+              
+              {/* Art */}
+              <mesh>
+                <planeGeometry args={[width, height]} />
+                <meshStandardMaterial map={texture} />
+              </mesh>
+            </group>
           );
         })}
       </group>

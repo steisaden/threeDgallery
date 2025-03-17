@@ -1,21 +1,13 @@
+// src/components/CircleGallery.jsx
 import React, { useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { Reflector } from '@react-three/drei';
-import { useLoader,  useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { TextureLoader } from 'three';
+import { AssetManager } from './utils/AssetManager';
 
 function CircleGallery() {
-  // Sample image URLs - replace with your actual image URLs
-  const sampleImages = [
-    '/assets/imgs/wall.jpg',
-    '/assets/imgs/wos.jpg',
-    '/assets/imgs/tunnelcanals.jpg',
-    '/assets/imgs/tryangles.jpg',
-    '/assets/imgs/painters.jpg',
-    '/assets/imgs/lido.jpg',
-    '/assets/imgs/konica.jpg',
-    '/assets/imgs/flower.jpg'
-  ];
+  // Use preloaded textures from AssetManager
+  const textures = AssetManager.getSampleTexturesForGallery(8);
   
   const reflectionProps = {
     resolution: 512,
@@ -31,14 +23,7 @@ function CircleGallery() {
   const innerCircleRef = useRef();
   const outerCircleRef = useRef();
   
-  // Load textures using useLoader
-  const textures = useLoader(TextureLoader, sampleImages);
-  
   useFrame(() => {
-    if (!textures || textures.some(texture => !texture.image)) {
-      return;
-    }
-
     if (innerCircleRef.current) {
       innerCircleRef.current.rotation.y += rotationSpeed;
     }
@@ -100,29 +85,36 @@ function CircleGallery() {
         {createCircularWall(30, 8, 12, 4, 'white')}
 
         {/* Paintings */}
-        {Array.from({ length: 6 }).map((_, i) => {
-          const texture = textures[i % textures.length];
+        {textures.slice(0, 6).map((texture, i) => {
           const angle = (i * Math.PI * 2) / 12;
           const radius = 28;
 
-          // Calculate aspect ratio and adjust dimensions
-          const aspectRatio = texture.image.width / texture.image.height;
-          const height = 12.5; // Base height
+          // Calculate aspect ratio for the texture
+          const aspectRatio = 
+            texture.image instanceof HTMLCanvasElement ? 1 :
+            texture.image ? texture.image.width / texture.image.height : 1;
+            
+          const height = 6.5; // Smaller than original
           const width = height * aspectRatio;
 
           return (
-            <mesh
-              key={`painting-${i}`}
-              position={[
-                radius * Math.cos(angle),
-                3,
-                radius * Math.sin(angle)
-              ]}
-              rotation={[0, angle + Math.PI / 2, 0]}
-            >
-              <planeGeometry args={[width, height]} />
-              <meshStandardMaterial map={texture} />
-            </mesh>
+            <group key={`painting-${i}`} position={[
+              radius * Math.cos(angle),
+              3,
+              radius * Math.sin(angle)
+            ]} rotation={[0, angle + Math.PI / 2, 0]}>
+              {/* Frame */}
+              <mesh position={[0, 0, -0.05]}>
+                <planeGeometry args={[width + 0.2, height + 0.2]} />
+                <meshStandardMaterial color="black" />
+              </mesh>
+              
+              {/* Art */}
+              <mesh>
+                <planeGeometry args={[width, height]} />
+                <meshStandardMaterial map={texture} />
+              </mesh>
+            </group>
           );
         })}
       </group>

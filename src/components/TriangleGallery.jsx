@@ -1,22 +1,14 @@
+// src/components/TriangleGallery.jsx
 import React, { useRef } from 'react';
+import { useFrame } from '@react-three/fiber';
 import { Reflector } from '@react-three/drei';
-import { useLoader, useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { TextureLoader } from 'three';
+import { AssetManager } from './utils/AssetManager';
 
 function TriangleGallery() {
-  const sampleImages = [
-    '/assets/imgs/wall.jpg',
-    '/assets/imgs/wos.jpg',
-    '/assets/imgs/tunnelcanals.jpg',
-    '/assets/imgs/tryangles.jpg',
-    '/assets/imgs/painters.jpg',
-    '/assets/imgs/lido.jpg',
-    '/assets/imgs/konica.jpg',
-    '/assets/imgs/flower.jpg'
-  ];
+  // Use preloaded textures from AssetManager
+  const textures = AssetManager.getSampleTexturesForGallery(8);
   
-  const textures = useLoader(TextureLoader, sampleImages);
   const reflectionProps = {
     resolution: 512,
     mirror: 1,
@@ -31,14 +23,10 @@ function TriangleGallery() {
   const triangleRef = useRef();
   
   useFrame(() => {
-    if (!textures) return;
-
     if (triangleRef.current) {
       triangleRef.current.rotation.y += rotationSpeed;
     }
   });
-
-
 
   const createTriangleWall = (size, height, yPosition) => {
     const walls = [];
@@ -103,17 +91,20 @@ function TriangleGallery() {
 
         {/* Paintings */}
         {Array.from({ length: 3 }).map((_, i) => {
-          const texture = textures[i % textures.length];
+          const texture = textures[i];
           const angle = (i * Math.PI * 2) / 3;
           const radius = 8;
 
-          // Calculate aspect ratio and adjust dimensions
-          const aspectRatio = texture.image.width / texture.image.height;
+          // Calculate aspect ratio for the texture
+          const aspectRatio = 
+            texture.image instanceof HTMLCanvasElement ? 1 :
+            texture.image ? texture.image.width / texture.image.height : 1;
+            
           const height = 1.5; // Base height
           const width = height * aspectRatio;
 
           return (
-            <mesh
+            <group
               key={`painting-${i}`}
               position={[
                 radius * Math.cos(angle),
@@ -122,9 +113,18 @@ function TriangleGallery() {
               ]}
               rotation={[0, angle + Math.PI / 2, 0]}
             >
-              <planeGeometry args={[width, height]} />
-              <meshStandardMaterial map={texture} />
-            </mesh>
+              {/* Frame */}
+              <mesh position={[0, 0, -0.05]}>
+                <planeGeometry args={[width + 0.2, height + 0.2]} />
+                <meshStandardMaterial color="black" />
+              </mesh>
+              
+              {/* Art */}
+              <mesh>
+                <planeGeometry args={[width, height]} />
+                <meshStandardMaterial map={texture} />
+              </mesh>
+            </group>
           );
         })}
       </group>

@@ -1,21 +1,12 @@
+// src/components/XGallery.jsx
 import React from 'react';
 import { Reflector } from '@react-three/drei';
-import { useLoader } from '@react-three/fiber';
 import * as THREE from 'three';
-import { TextureLoader } from 'three';
+import { AssetManager } from './utils/AssetManager';
 
 function XGallery() {
-  // Sample image URLs - replace with your actual image URLs
-  const sampleImages = [
-    '/assets/imgs/wall.jpg',
-    '/assets/imgs/wos.jpg',
-    '/assets/imgs/tunnelcanals.jpg',
-    '/assets/imgs/tryangles.jpg',
-    '/assets/imgs/painters.jpg',
-    '/assets/imgs/lido.jpg',
-    '/assets/imgs/konica.jpg',
-    '/assets/imgs/flower.jpg'
-  ];
+  // Use preloaded textures from AssetManager
+  const textures = AssetManager.getSampleTexturesForGallery(8);
   
   const reflectionProps = {
     resolution: 512,
@@ -26,14 +17,6 @@ function XGallery() {
     metalness: 0.6,
     roughness: 0.2
   };
-
-  // Load textures using useLoader
-  const textures = useLoader(TextureLoader, sampleImages);
-
-  // Add loading state check
-  if (!textures || textures.some(texture => !texture || !texture.image)) {
-    return null;
-  }
 
   const createXStructure = (size) => {
     return (
@@ -52,27 +35,43 @@ function XGallery() {
         {[-1, 1].map((multiplier) => (
           <group key={`x-arm-${multiplier}`}>
             {Array.from({ length: 4 }).map((_, i) => {
-              const texture = textures[i + (multiplier === 1 ? 4 : 0)];
+              const textureIndex = i + (multiplier === 1 ? 4 : 0);
+              const texture = textures[textureIndex];
+              
+              if (!texture) return null;
+              
               const position = [
                 multiplier * (i + 1) * 2,
                 3,
                 multiplier * (i + 1) * 2
               ];
               
-              // Calculate aspect ratio and adjust dimensions
-              const aspectRatio = texture.image.width / texture.image.height;
+              // Calculate aspect ratio for the texture
+              const aspectRatio = 
+                texture.image instanceof HTMLCanvasElement ? 1 :
+                texture.image ? texture.image.width / texture.image.height : 1;
+                
               const height = 1.5; // Base height
               const width = height * aspectRatio;
               
               return (
-                <mesh
+                <group
                   key={`x-painting-${i}-${multiplier}`}
                   position={position}
                   rotation={[0, Math.PI/4 * multiplier, 0]}
                 >
-                  <planeGeometry args={[width, height]} />
-                  <meshStandardMaterial map={texture} />
-                </mesh>
+                  {/* Frame */}
+                  <mesh position={[0, 0, -0.05]}>
+                    <planeGeometry args={[width + 0.2, height + 0.2]} />
+                    <meshStandardMaterial color="black" />
+                  </mesh>
+                  
+                  {/* Art */}
+                  <mesh>
+                    <planeGeometry args={[width, height]} />
+                    <meshStandardMaterial map={texture} />
+                  </mesh>
+                </group>
               );
             })}
           </group>
